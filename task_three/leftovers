@@ -1,0 +1,30 @@
+
+=begin
+    @rational_array = []
+    range_sum_max = Math.sqrt(max_index*2).floor #reverse gauss numbers sum formula
+    1.upto range_sum_max+2 do |diagonal_index|
+      ratio, lowering_index = diagonal_index.odd? ?
+        [[1, diagonal_index+1], 1] : [[diagonal_index+1, 1], 0]
+      1.upto diagonal_index do |cell_index|
+        ratio[lowering_index]-=1
+        ratio[ (lowering_index + 1) % 2 ] = cell_index
+        @rational_array.push(Rational(ratio[0], ratio[1]))
+      end
+    end
+    @rational_array = @rational_array.uniq[0..(max_index-1)]
+=end
+
+tests:
+
+rat_seq = RationalSequence.new(6)
+rat_seq.extend(4)
+p rat_seq.to_a
+prim_seq = PrimeSequence.new(5)
+prim_seq.extend(5)
+p prim_seq.to_a
+fib_seq = FibonacciSequence.new(3, first: 0, second: 1)
+fib_seq.extend(4)
+p fib_seq.to_a
+p DrunkenMathematician.meaningless(10)
+p DrunkenMathematician.aimless(5)
+p DrunkenMathematician.worthless(5)
