@@ -1,0 +1,102 @@
+FIRST_LETTER = "A"
+ALPHABET_LETTERS = 26
+
+INVALID_INDEX = "Invalid cell index '%{index}'"
+NO_CELL = "Cell '%{index}' does not exist"
+UNKNOWN_FUNCTION = "Unknown function '%{name}'"
+#ARGUMENTS_NUMBER = "Wrong number of arguments for %{name}: "
+#ARGUMENTS_NUMBER += "expected at least %{expected}, got %{got}"
+
+class Spreadsheet
+  def initialize(table_string = "")
+    rows = table_string.split("\n").reject(&:empty?)
+    @table = rows.map{|row| row.split(/  +/).reject(&:empty?)}
+  end
+
+  def empty?
+    @table.empty?
+  end
+
+  def cell_at(cell_index)
+    invalid_index = cell_index !~ /^[A-Z]+\d+$/
+    raise(Error.new, INVALID_INDEX % {index: cell_index}) if invalid_index
+    letters, number = cell_index.scan(/\d+|\D+/)
+    invalid_cell = @table[number.to_i - 1][letter_index(letters)].nil?
+    raise(Error.new, NO_CELL % {index: cell_index}) if invalid_cell
+    @table[number.to_i - 1][letter_index(letters)]
+  end
+
+  def [](cell_index)
+    Format.format_result(evaluate(cell_at cell_index)).to_s
+  end
+
+  def evaluate(raw_input)
+    case raw_input
+      when /^= *[A-Z]+\d+/ then self[((/[A-Z]+\d+/.match raw_input).to_s)]
+      when /^= *\d/ then raw_input.split(/^= */).last.to_f
+      when /^= *[A-Z]+(.+)/ then call_function(raw_input.split(/^= */).last)
+      else raw_input
+    end
+  end
+
+  def call_function(function_string)
+    function_name = function_string.split("(").first
+    arguments = function_string[/\((.*)\)/,1].split(/, */)
+    arguments = arguments.map{|argument| evaluate("=#{argument}").to_f}
+    Function.use_function function_name, arguments
+  end
+
+  def letter_index(letters)
+    letters.split("").each.with_index.inject(0) do | result, (letter, index) |
+      alphabetical_number = letter.ord - FIRST_LETTER.ord + 1
+      shift_multiplication = ALPHABET_LETTERS ** (letters.size - index - 1)
+      result += alphabetical_number * shift_multiplication
+    end - 1
+  end
+
+  def to_s
+    @table.map do |row|
+      row.map do |cell|
+        cell = Format.format_result evaluate cell
+      end.join("\t")
+    end.join("\n")
+  end
+
+  class Error < StandardError
+  end
+
+  module Format
+    def self.format_result(result)
+      if result.is_a? Float
+        result = result.round(2)
+        result = result.round == result ? result.round : result
+      end
+      result
+    end
+  end
+
+  module Function
+    def self.use_function(name, *arguments)
+      begin
+        return eval("#{name.downcase} #{arguments.join(", ")}")
+      rescue NoMethodError
+        raise Error.new, UNKNOWN_FUNCTION % {name: name}
+      end
+    end
+    def self.add(*arguments)
+      arguments.inject(&:+)
+    end
+    def self.multiply(*arguments)
+      arguments.inject(&:*)
+    end
+    def self.subtract(*arguments)
+      arguments.first - arguments.last
+    end
+    def self.divide(*arguments)
+      arguments.first / arguments.last
+    end
+    def self.mod(*arguments)
+      arguments.first * arguments.last
+    end
+  end
+end
